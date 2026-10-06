@@ -13,10 +13,9 @@ There is no server to run, no account to create, and no internet connection need
 Three source files, three releases. Nothing else is needed to build or use it.
 
 ```
-ExampleShippedApp/ExampleShippedApp.cpp    the app your customers run
-MachineCodeTool/MachineCodeTool.cpp        optional helper, copies the machine code for them
-PrivateOwnerApp/PrivateOwnerApp.cs         your key-making tool (keep it private)
-Release/                                   the three built exes, ready for a GitHub Release (not committed)
+ExampleShippedApp/   ExampleShippedApp.cpp + .exe    the app your customers run
+MachineCodeTool/     MachineCodeTool.cpp + .exe      optional helper, copies the machine code for them
+PrivateOwnerApp/     PrivateOwnerApp.cs + .exe       your key-making tool, plus the public demo keys
 ```
 
 > **Status: proof of concept.** It is a complete, working system, written to be lifted into your own app. See [Using it in your own app](#part-3-using-it-in-your-own-app) and [Making it stronger](#making-it-stronger).
@@ -33,7 +32,7 @@ wKWlbAAAAABDQUxDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 Paste it into the activation screen of `ExampleShippedApp.exe` (or save it as `license.key` next to the exe). **Valid through 2027-10-05** (the end of that day, in the issuer's time zone). It works with the released `ExampleShippedApp.exe` or any build of this repo's source, because both carry the demo public keys. If you replace the demo keys it stops working: make a new one with **Test key (any PC)** in PrivateOwnerApp and update this block.
 
-To try the full flow (machine code in, license out) build from source with your own keys, see [Build](#build). Licenses from your own PrivateOwnerApp only unlock a build that carries your public keys.
+**Want to try the whole flow, machine code in and license out?** The demo signing keys sit in `PrivateOwnerApp/` on purpose, and they are public, so anyone can make licenses for the demo app. Download the repo, run `MachineCodeTool.exe` to get a machine code, then run `PrivateOwnerApp/PrivateOwnerApp.exe` from that folder (it finds the keys next to it), paste the code in and hit Generate. Never use these keys for a real product. Make your own, see [Build](#build).
 
 ---
 
@@ -209,7 +208,7 @@ The app looks next to the exe first, then in `%APPDATA%\ExampleShippedApp\`, and
 | `public.txt` | The two public key rows to paste into `kPub` in `ExampleShippedApp.cpp` | Public, safe. |
 | `issued.csv` | Log of every license issued, with its usable-ID count (test keys are marked) | Your reissue record. |
 
-All private files are plaintext on disk by design (a forgotten passphrase would be as fatal as a lost key when no updates are possible). Keep them offline and backed up. They are in `.gitignore`.
+All private files are plaintext on disk by design (a forgotten passphrase would be as fatal as a lost key when no updates are possible). Keep them offline and backed up, and keep them out of git (`*.key`, `public.txt` and `issued.csv` belong in a `.gitignore`). The demo keys in this repo are the exception: they are published on purpose, so delete them (`git rm`) before you make your own, otherwise your new keys land on a path git already tracks.
 
 ### What `K` is for
 
@@ -225,7 +224,7 @@ Requirements: Windows 10/11, Visual Studio 2019 or newer (Community is fine) wit
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /out:PrivateOwnerApp.exe /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Core.dll PrivateOwnerApp.cs
 ```
 
-Run it. On first run it offers to create `issuer.key`, `spare.key`, `asset.key` and `public.txt` (it refuses to overwrite existing ones), then shows the two public key rows. **Move `spare.key` off the PC and back up `asset.key` immediately.**
+Run it. If there are no keys next to it, it offers to create `issuer.key`, `spare.key`, `asset.key` and `public.txt` (it refuses to overwrite existing ones), then shows the two public key rows. The repo's demo keys are public, so delete them first when you want your own. **Move `spare.key` off the PC and back up `asset.key` immediately.**
 
 **2. Paste the public rows** into `kPub` in `ExampleShippedApp.cpp`, replacing the demo rows. (The **Public keys...** button shows them again any time.)
 
@@ -277,14 +276,6 @@ Roughly cheapest first. None of these make a patched exe impossible, they make i
 9. **Revocation without a server.** Put a serial number in each license and let the app read an owner-signed revocation list file that you hand out. Short expiries with renewals also bound the damage of a leaked key.
 10. **If you can host one small thing,** an activation counter (one key, N machines) is the only way to actually detect sharing.
 
-### Releasing
-
-- Attach the three exes from `Release/` to a GitHub Release. Say plainly that the released `ExampleShippedApp.exe` only accepts the demo test key.
-- Do not run `Release/PrivateOwnerApp.exe` in place: its first run writes the key files next to it. Run the copy in `PrivateOwnerApp/`.
-- Unsigned exes trigger SmartScreen warnings. Authenticode-sign your own builds.
-- Programs that read hardware IDs and the clipboard can trip antivirus heuristics. Keep the source public so people can check what `MachineCodeTool` does.
-- Pick a repository license. None is included here.
-
 ### Tested on
 
 - Windows 11, Visual Studio 2022, one PC. The machine code came out identical with and without admin rights (checked with a restricted token on an admin account).
@@ -333,7 +324,11 @@ A server or online activation, TPM binding, a packer or obfuscation, key passphr
 
 ## Before you ship something real
 
-1. Delete the demo `.key` files and `public.txt`, run `PrivateOwnerApp` to generate your own, paste the new rows into `kPub`, rebuild `ExampleShippedApp`, and keep `spare.key` and `asset.key` backed up **offline**. This invalidates the test key at the top of this README: make a new one and update it.
+1. The demo keys are public, so anything signed with them can be forged by anyone. Delete the demo `.key` files and `public.txt`, run `PrivateOwnerApp` to generate your own, paste the new rows into `kPub`, rebuild `ExampleShippedApp`, and keep `spare.key` and `asset.key` backed up **offline**. This invalidates the test key at the top of this README: make a new one and update it.
 2. Change the product tag (`Tag` in `PrivateOwnerApp.cs` and `kTag` in `ExampleShippedApp.cpp`) to match your app.
 3. Make your app genuinely depend on `gK` (decrypt a needed asset with it), and read [Making it stronger](#making-it-stronger).
 4. Pack the final exe, and ship **only** the shipped app (and `MachineCodeTool` if you want it). Never ship `PrivateOwnerApp` or any `.key` file.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
